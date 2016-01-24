@@ -43,7 +43,20 @@ function makeRelative(currentFile, module) {
   return relativePath;
 }
 
-export default ({types: t}) => {
+function makeModulePathRelative(currentFile, node, options) {
+  const { pattern } = options;
+  const requirePath = testPattern(node.value, pattern);
+
+  if (requirePath) {
+    const modulePath = makeRelative(currentFile, requirePath);
+
+    if (modulePath) {
+      node.value = modulePath;
+    }
+  }
+}
+
+export default ({ types: t }) => {
   return {
     visitor: {
       CallExpression: {
@@ -57,39 +70,21 @@ export default ({types: t}) => {
               return;
             }
 
-            const pattern = opts.pattern;
             const currentFile = state.file.opts.filename;
             const moduleNode = node.arguments[0];
 
             if (t.isStringLiteral(moduleNode)) {
-              const requirePath = testPattern(moduleNode.value, pattern);
-
-              if (requirePath) {
-                const modulePath = makeRelative(currentFile, requirePath);
-
-                if (modulePath) {
-                  moduleNode.value = modulePath;
-                }
-              }
+              makeModulePathRelative(currentFile, moduleNode, opts);
             }
           }
       },
       ImportDeclaration: {
-        exit({ node, state, opts }, state) {
-          const pattern = opts.pattern;
+        exit({ node, opts }, state) {
           const currentFile = state.file.opts.filename;
           const moduleNode = node.source;
 
           if (t.isStringLiteral(moduleNode)) {
-            const requirePath = testPattern(moduleNode.value, pattern);
-
-            if (requirePath) {
-              const modulePath = makeRelative(currentFile, requirePath);
-
-              if (modulePath) {
-                moduleNode.value = modulePath;
-              }
-            }
+            makeModulePathRelative(currentFile, moduleNode, opts);
           }
         }
       }
