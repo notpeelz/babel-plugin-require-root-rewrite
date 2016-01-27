@@ -35,7 +35,14 @@ $ npm install babel-plugin-require-root-rewrite
 ``` json
 {
   "plugins": [
-    "babel-plugin-require-root-rewrite"
+    ["babel-plugin-require-root-rewrite", {
+      "pattern": "^~/",
+      "basePath": "lib",
+      "overrides": [
+        "api",
+        "server"
+      ]
+    }]
   ]
 }
 ```
