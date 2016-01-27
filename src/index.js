@@ -19,6 +19,7 @@ function testPattern(value, pattern) {
 }
 
 function resolveAbsolute(filename) {
+  filename = path.normalize(filename);
   if (path.isAbsolute(filename)) {
     return filename;
   }
@@ -30,11 +31,8 @@ function resolveAbsolute(filename) {
   return path.resolve(filename);
 }
 
-function makeRelative(currentFile, module) {
-  let currentPath = resolveAbsolute(path.dirname(currentFile));
-  let modulePath = resolveAbsolute(path.normalize(module));
-
-  let relativePath = path.relative(currentPath, modulePath);
+function makeRelative(basePath, modulePath) {
+  let relativePath = path.relative(basePath, modulePath);
 
   if (!relativePath.startsWith('.')) {
     relativePath = path.join('./', relativePath);
@@ -43,16 +41,32 @@ function makeRelative(currentFile, module) {
   return relativePath;
 }
 
+function* getOverrides(currentPath, projectPath, overrides) {
+  for (let override of overrides) {
+    const pathPrefix = path.join(projectPath, override);
+
+    if (typeof override === 'string' && currentPath.startsWith(pathPrefix)) {
+      yield override;
+    }
+  }
+}
+
+function getBasePath(currentPath, projectPath, options) {
+  const { overrides = [], basePath = '' } = options;
+  const matches = [...getOverrides(currentPath, projectPath, overrides)];
+
+  return resolveAbsolute(matches.pop() || basePath);
+}
+
 function makeModulePathRelative(currentFile, node, options) {
-  const { pattern } = options;
-  const requirePath = testPattern(node.value, pattern);
+  const requirePath = testPattern(node.value, options.pattern);
 
   if (requirePath) {
-    const modulePath = makeRelative(currentFile, requirePath);
+    const currentPath = resolveAbsolute(path.dirname(currentFile));
+    const rootPath = resolveAbsolute('.');
+    const basePath = getBasePath(currentPath, rootPath, options);
 
-    if (modulePath) {
-      node.value = modulePath;
-    }
+    node.value = makeRelative(currentPath, resolveAbsolute(path.join(basePath, requirePath)));
   }
 }
 
@@ -60,7 +74,7 @@ export default ({ types: t }) => {
   return {
     visitor: {
       CallExpression: {
-          exit({ node, opts }, state) {
+          exit({ node }, state) {
             if(!t.isIdentifier(node.callee, { name: 'require' }) &&
               !(
                 t.isMemberExpression(node.callee) &&
@@ -74,17 +88,17 @@ export default ({ types: t }) => {
             const moduleNode = node.arguments[0];
 
             if (t.isStringLiteral(moduleNode)) {
-              makeModulePathRelative(currentFile, moduleNode, opts);
+              makeModulePathRelative(currentFile, moduleNode, state.opts);
             }
           }
       },
       ImportDeclaration: {
-        exit({ node, opts }, state) {
+        exit({ node }, state) {
           const currentFile = state.file.opts.filename;
           const moduleNode = node.source;
 
           if (t.isStringLiteral(moduleNode)) {
-            makeModulePathRelative(currentFile, moduleNode, opts);
+            makeModulePathRelative(currentFile, moduleNode, state.opts);
           }
         }
       }
