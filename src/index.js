@@ -41,14 +41,18 @@ function makeRelative(basePath, modulePath) {
   return relativePath;
 }
 
-function* getOverrides(currentPath, projectPath, overrides) {
+function getOverrides(currentPath, projectPath, overrides) {
+  const matches = [];
+
   for (let override of overrides) {
     const pathPrefix = path.join(projectPath, override);
 
     if (typeof override === 'string' && currentPath.startsWith(pathPrefix)) {
-      yield override;
+      matches.push(override);
     }
   }
+
+  return matches;
 }
 
 function getBasePath(currentPath, projectPath, options) {
