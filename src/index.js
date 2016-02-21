@@ -35,7 +35,7 @@ function makeRelative(basePath, modulePath) {
   let relativePath = path.relative(basePath, modulePath);
 
   if (!relativePath.startsWith('.')) {
-    relativePath = path.join('./', relativePath);
+    relativePath = './' + relativePath;
   }
 
   return relativePath;
