@@ -23,7 +23,7 @@ var BaseAuthForm = require('../../components/BaseAuthForm');
 ## Installation
 
 ``` sh
-$ npm install babel-plugin-require-root-rewrite
+$ npm install babel-plugin-require-root-rewrite --save-dev
 ```
 
 ## Usage
